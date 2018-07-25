@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>蓝骑士随意录</title>
+  
+  <subtitle>Developer</subtitle>
+  <link href="/atom.xml" rel="self"/>
+  
+  <link href="http://blog.xiganglive.com/"/>
+  <updated>2018-07-25T06:45:41.005Z</updated>
+  <id>http://blog.xiganglive.com/</id>
+  
+  <author>
+    <name>John Xi</name>
+    
+  </author>
+  
+  <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>CentOS7安装ZooKeeper集群</title>
+    <link href="http://blog.xiganglive.com/2018/06/21/CentOS7%E5%AE%89%E8%A3%85ZooKeeper%E9%9B%86%E7%BE%A4/"/>
+    <id>http://blog.xiganglive.com/2018/06/21/CentOS7安装ZooKeeper集群/</id>
+    <published>2018-06-21T06:21:33.000Z</published>
+    <updated>2018-07-25T06:45:41.005Z</updated>
+    
+    <content type="html"><![CDATA[<h2 id="集群方案"><a href="#集群方案" class="headerlink" title="集群方案"></a>集群方案</h2><pre><code>主机IP            消息端口:通信端口    节点目录/usr/local/下192.168.1.1 2181    2888:3888    zookeeper192.168.1.2    2181    2888:3888    zookeeper192.168.1.3    2181    2888:3888    zookeeper</code></pre><h2 id="安装JDK"><a href="#安装JDK" class="headerlink" title="安装JDK"></a>安装JDK</h2><pre><code># 安装JDK# 配置/etc/profilevim /etc/profile    export JAVA_HOME=/usr/local/jdk    export PATH=$JAVA_HOME/bin:$PATH    export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar    export JAVA=$JAVA_HOME/bin/javasource /etc/profile</code></pre><h2 id="以下操作3台机器同时操作"><a href="#以下操作3台机器同时操作" class="headerlink" title="以下操作3台机器同时操作"></a>以下操作3台机器同时操作</h2><h2 id="准备3台虚拟机"><a href="#准备3台虚拟机" class="headerlink" title="准备3台虚拟机"></a>准备3台虚拟机</h2><p>IP地址为</p><pre><code>192.168.1.1192.168.1.2192.168.1.3</code></pre><h2 id="新建用户"><a href="#新建用户" class="headerlink" title="新建用户"></a>新建用户</h2><pre><code>useradd zookeeperpasswd zookeeper</code></pre><h2 id="安装依赖"><a href="#安装依赖" class="headerlink" title="安装依赖"></a>安装依赖</h2><pre><code>yum install wget</code></pre><h2 id="下载ZooKeeper源码"><a href="#下载ZooKeeper源码" class="headerlink" title="下载ZooKeeper源码"></a>下载ZooKeeper源码</h2><pre><code>wget http://apache.fayea.com/zookeeper/stable/zookeeper-3.4.12.tar.gztar -zxvf zookeeper-3.4.12.tar.gzmv zookeeper-3.4.12 /usr/local/zookeepercd /usr/local/zookeeper/mkdir datamkdir logchown -R zookeeper.zookeeper datachown -R zookeeper.zookeeper logs</code></pre><h2 id="修改配置文件"><a href="#修改配置文件" class="headerlink" title="修改配置文件"></a>修改配置文件</h2><pre><code># 将/conf目录下的zoo_sample.cfg文件拷贝一份， 命名为为zoo.cfgcp zoo_sample.cfg zoo.cfgvim zoo.cfg    dataDir=/usr/local/zookeeper/data    dataLogDir=/usr/local/zookeeper/logs    # 2888 端口号是 zookeeper 服务之间通信的端口。    # 3888 是 zookeeper 与其他应用程序通信的端口。    server.0=192.168.1.1:2888:3888    server.1=192.168.1.2:2888:3888    server.2=192.168.1.3:2888:3888</code></pre><h2 id="新建myid文件"><a href="#新建myid文件" class="headerlink" title="新建myid文件"></a>新建myid文件</h2><pre><code>cd /usr/local/zookeeper/data    * 192.168.1.1机器: echo 0 &gt;&gt; myid    * 192.168.1.2机器: echo 1 &gt;&gt; myid    * 192.168.1.3机器: echo 2 &gt;&gt; myid    # 这里的0,1,2对应zoo.cfg中server.x处的x</code></pre><h2 id="编辑-bash-profile"><a href="#编辑-bash-profile" class="headerlink" title="编辑.bash_profile"></a>编辑.bash_profile</h2><pre><code>su - zookeepervim .bash_profile    export ZOOKEEPER_HOME=/usr/local/zookeeper    # zookeeper env    export PATH=$ZOOKEEPER_HOME/bin:$PATHsource .bash_profile</code></pre><h2 id="zookeeper操作"><a href="#zookeeper操作" class="headerlink" title="zookeeper操作"></a>zookeeper操作</h2><pre><code>cd /usr/local/zookeeper/binvim zkServer.sh    #在129行增加如下内容，因为脚本里并未读取zoo.cfg中设定的log目录    ZOO_LOG_DIR=/usr/local/zookeeper/logs# 启动zkzkServer.sh start# 查看状态zkServer.sh status# 停止zkzkServer.sh stop# 查看日志tail -f /usr/local/zookeeper/logs/zookeeper.out</code></pre><h2 id="设置ZooKeeper开机启动"><a href="#设置ZooKeeper开机启动" class="headerlink" title="设置ZooKeeper开机启动"></a>设置ZooKeeper开机启动</h2><pre><code>vim /etc/rc.local    su - zookeeper -c &apos;/usr/local/zookeeper/bin/zkServer.sh start&apos;</code></pre><h2 id="防火墙过滤"><a href="#防火墙过滤" class="headerlink" title="防火墙过滤"></a>防火墙过滤</h2><pre><code>firewall-cmd --zone=public --add-port=2181/tcp --permanentfirewall-cmd --zone=public --add-port=2888/tcp --permanentfirewall-cmd --zone=public --add-port=3888/tcp --permanentfirewall-cmd --reload</code></pre>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h2 id=&quot;集群方案&quot;&gt;&lt;a href=&quot;#集群方案&quot; class=&quot;headerlink&quot; title=&quot;集群方案&quot;&gt;&lt;/a&gt;集群方案&lt;/h2&gt;&lt;pre&gt;&lt;code&gt;主机IP            消息端口:通信端口    节点目录/usr/local/下
+192.168.
+      
+    
+    </summary>
+    
+      <category term="Linux" scheme="http://blog.xiganglive.com/categories/Linux/"/>
+    
+      <category term="个人作品" scheme="http://blog.xiganglive.com/categories/Linux/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/"/>
+    
+    
+      <category term="ZooKeeper" scheme="http://blog.xiganglive.com/tags/ZooKeeper/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>CentOS7安装Redis集群</title>
+    <link href="http://blog.xiganglive.com/2018/06/21/CentOS7%E5%AE%89%E8%A3%85Redis%E9%9B%86%E7%BE%A4/"/>
+    <id>http://blog.xiganglive.com/2018/06/21/CentOS7安装Redis集群/</id>
+    <published>2018-06-21T06:21:03.000Z</published>
+    <updated>2018-07-25T06:45:48.192Z</updated>
+    
+    <content type="html"><![CDATA[<h2 id="安装依赖"><a href="#安装依赖" class="headerlink" title="安装依赖"></a>安装依赖</h2><pre><code>yum install gcc-c++yum install ruby ruby-devel rubygems rpm-build</code></pre><h2 id="安装官方脚本"><a href="#安装官方脚本" class="headerlink" title="安装官方脚本"></a>安装官方脚本</h2><pre><code>wget https://rubygems.org/downloads/redis-3.2.1.gemgem install redis-3.2.1.gem</code></pre><h2 id="下载Redis源码"><a href="#下载Redis源码" class="headerlink" title="下载Redis源码"></a>下载Redis源码</h2><pre><code>wget http://download.redis.io/releases/redis-3.2.11.tar.gztar zxvf redis-3.2.11.tar.gzcd redis-3.2.11makemake PREFIX=/usr/local/redis install# 拷贝conf文件mkdir /usr/local/redis/conf/cp redis.conf /usr/local/redis/conf/redis.conf# 启动redis/usr/local/redis/bin/redis-server /usr/local/redis/conf/redis.conf</code></pre><h2 id="搭建Redis集群"><a href="#搭建Redis集群" class="headerlink" title="搭建Redis集群"></a>搭建Redis集群</h2><pre><code># 复制多个conf文件cd /usr/local/redis/conf/cp redis.conf redis_xxx.conf# 修改配置，每个conf文件都需修改vim redis_xxx.conf    port xxxx #修改端口     cluster-enabled yes #打开注释，开启集群模式     cluster-config-file nodes-xxxx.conf #集群的配置文件    pidfile /var/run/redis_xxxx.pid #pidfile文件     logfile &quot;xxxx.log&quot; #日志文件     dbfilename dump_xxxx.rdb #rdb持久化文件     cluster-node-timeout 5000 #请求超时，单位毫秒     appendonly yes #开启aof持久化方式vim start-all.sh    #! /bin/bash    /usr/local/redis/bin/redis-server /usr/local/redis/conf/redis_1.conf    /usr/local/redis/bin/redis-server /usr/local/redis/conf/redis_2.conf    /usr/local/redis/bin/redis-server /usr/local/redis/conf/redis_3.conf    /usr/local/redis/bin/redis-server /usr/local/redis/conf/redis_4.confchmod +x start-all.sh    ./start-all.sh# 查看是否启动成功ps aux | grep redis    root       2780  0.8  0.5 139016  9808 ?        Ssl  09:29   0:45 /usr/local/redis-cluster/redis/bin/redis-server 0.0.0.0:7001 [cluster]    root       2782  0.9  0.4 136968  7756 ?        Ssl  09:29   0:46 /usr/local/redis-cluster/redis/bin/redis-server 0.0.0.0:7002 [cluster]</code></pre><h2 id="创建集群"><a href="#创建集群" class="headerlink" title="创建集群"></a>创建集群</h2><pre><code>第一步：搭建集群 ./redis-trib.rb create ，选择yes接受建议的配置第二步：进入集群客户端 ./redis-cli -h 任意主机host -p 任意主机port -c，-c表示以集群方式连接redis第三步：保存数据第四步：cluster info 查询集群状态信息第五步：cluster nodes 查询集群结点信息cd redis-3.2.11cp src/redis-trib.rb /usr/local/redis-cluster/redis-trib.rb# 集群创建命令： ./redis-trib.rb create 创建集群，--replicas 1 给每个主机分配一个从机，后面其他参数都是redis服务的ip:port。最后输入yes来接受建议的配置redis-trib.rb create --replicas 1 127.0.0.1:7001 127.0.01:7002 127.0.0.1:7003 127.0.0.1:7004    [OK] All 16384 slots covered. # 表示创建成功/usr/local/redis/bin/redis-cli -h 127.0.0.1 -p 7001 -c127.0.0.1:7001&gt; cluster infocluster_state:okcluster_slots_assigned:16384cluster_slots_ok:16384cluster_slots_pfail:0cluster_slots_fail:0cluster_known_nodes:6cluster_size:3cluster_current_epoch:6cluster_my_epoch:3cluster_stats_messages_sent:12578cluster_stats_messages_received:12578</code></pre><h2 id="添加防火墙过滤"><a href="#添加防火墙过滤" class="headerlink" title="添加防火墙过滤"></a>添加防火墙过滤</h2><pre><code>firewall-cmd --zone=public --add-port=7001/tcp --permanentfirewall-cmd --zone=public --add-port=7002/tcp --permanentfirewall-cmd --zone=public --add-port=7003/tcp --permanentfirewall-cmd --zone=public --add-port=7004/tcp --permanentfirewall-cmd --zone=public --add-port=17001/tcp --permanent # 集群通信端口号为redis端口加10000firewall-cmd --zone=public --add-port=17002/tcp --permanent # 集群通信端口号为redis端口加10000firewall-cmd --zone=public --add-port=17003/tcp --permanent # 集群通信端口号为redis端口加10000firewall-cmd --zone=public --add-port=17004/tcp --permanent # 集群通信端口号为redis端口加10000firewall-cmd --reload # 重新加载</code></pre>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h2 id=&quot;安装依赖&quot;&gt;&lt;a href=&quot;#安装依赖&quot; class=&quot;headerlink&quot; title=&quot;安装依赖&quot;&gt;&lt;/a&gt;安装依赖&lt;/h2&gt;&lt;pre&gt;&lt;code&gt;yum install gcc-c++
+yum install ruby ruby-devel rubyge
+      
+    
+    </summary>
+    
+      <category term="Linux" scheme="http://blog.xiganglive.com/categories/Linux/"/>
+    
+      <category term="个人作品" scheme="http://blog.xiganglive.com/categories/Linux/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/"/>
+    
+    
+      <category term="Redis" scheme="http://blog.xiganglive.com/tags/Redis/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>CentOS7安装Docker-CE</title>
+    <link href="http://blog.xiganglive.com/2018/06/21/CentOS7%E5%AE%89%E8%A3%85Docker-CE/"/>
+    <id>http://blog.xiganglive.com/2018/06/21/CentOS7安装Docker-CE/</id>
+    <published>2018-06-21T06:18:36.000Z</published>
+    <updated>2018-07-25T06:45:26.612Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="卸载旧版docker及安装依赖"><a href="#卸载旧版docker及安装依赖" class="headerlink" title="卸载旧版docker及安装依赖"></a>卸载旧版docker及安装依赖</h3><pre><code>sudo yum remove docker docker-common docker-selinux docker-enginesudo yum install -y yum-utils device-mapper-persistent-data lvm2</code></pre><h3 id="下载repo"><a href="#下载repo" class="headerlink" title="下载repo"></a>下载repo</h3><pre><code>wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo</code></pre><h3 id="替换软件仓库为TUNA"><a href="#替换软件仓库为TUNA" class="headerlink" title="替换软件仓库为TUNA"></a>替换软件仓库为TUNA</h3><pre><code>sudo sed -i &apos;s+download.docker.com+mirrors.tuna.tsinghua.edu.cn/docker-ce+&apos; /etc/yum.repos.d/docker-ce.repo</code></pre><h3 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h3><pre><code>sudo yum makecache fastsudo yum install docker-ce</code></pre><h3 id="更换国内镜像"><a href="#更换国内镜像" class="headerlink" title="更换国内镜像"></a>更换国内镜像</h3><pre><code>sudo vim /etc/docker/daemon.json       {           &quot;registry-mirrors&quot;:    [               &quot;https://registry.docker-cn.com&quot;           ]       }sudo systemctl daemon-reloadsudo systemctl restart docker# 查看是否配置成功sudo docker info</code></pre>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;h3 id=&quot;卸载旧版docker及安装依赖&quot;&gt;&lt;a href=&quot;#卸载旧版docker及安装依赖&quot; class=&quot;headerlink&quot; title=&quot;卸载旧版docker及安装依赖&quot;&gt;&lt;/a&gt;卸载旧版docker及安装依赖&lt;/h3&gt;&lt;pre&gt;&lt;code&gt;sudo yum r
+      
+    
+    </summary>
+    
+      <category term="Linux" scheme="http://blog.xiganglive.com/categories/Linux/"/>
+    
+      <category term="个人作品" scheme="http://blog.xiganglive.com/categories/Linux/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/"/>
+    
+    
+      <category term="CentOS7" scheme="http://blog.xiganglive.com/tags/CentOS7/"/>
+    
+      <category term="Docker" scheme="http://blog.xiganglive.com/tags/Docker/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Linux Shell中使用date获取毫秒</title>
+    <link href="http://blog.xiganglive.com/2016/11/28/Linux%20Shell%E4%B8%AD%E4%BD%BF%E7%94%A8date%E8%8E%B7%E5%8F%96%E6%AF%AB%E7%A7%92/"/>
+    <id>http://blog.xiganglive.com/2016/11/28/Linux Shell中使用date获取毫秒/</id>
+    <published>2016-11-28T07:47:22.000Z</published>
+    <updated>2018-07-25T06:54:48.642Z</updated>
+    
+    <content type="html"><![CDATA[<p>获取yyyy-MM-dd HH:mm:ss格式时间</p><blockquote><p>date “+%F %T”</p></blockquote><p>获取UTC时间，单位为毫秒</p><blockquote><p>date “+%s%3N”</p></blockquote>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;获取yyyy-MM-dd HH:mm:ss格式时间&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;date “+%F %T”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;获取UTC时间，单位为毫秒&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;date “+%s%3N”&lt;/p&gt;
+&lt;/bl
+      
+    
+    </summary>
+    
+      <category term="Linux" scheme="http://blog.xiganglive.com/categories/Linux/"/>
+    
+    
+      <category term="Linux" scheme="http://blog.xiganglive.com/tags/Linux/"/>
+    
+      <category term="Shell" scheme="http://blog.xiganglive.com/tags/Shell/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Sublime Text 3安装Package Control最新方法</title>
+    <link href="http://blog.xiganglive.com/2014/01/03/Sublime%20Text%203%E5%AE%89%E8%A3%85Package%20Control%E6%9C%80%E6%96%B0%E6%96%B9%E6%B3%95/"/>
+    <id>http://blog.xiganglive.com/2014/01/03/Sublime Text 3安装Package Control最新方法/</id>
+    <published>2014-01-03T08:41:13.000Z</published>
+    <updated>2018-07-25T06:58:07.596Z</updated>
+    
+    <content type="html"><![CDATA[<p>换了台机器，需要重新安装Sublime Text 3，于是顺便查了下Package Control安装方法。 然后在官网上发现，Sublime Text 3安装Package Control变成和Sublime Text 2一样简单了。 1、按Ctrl+`召唤出控制台～ 2、输入下面的代码</p><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> urllib.request,os,hashlib; h = <span class="string">'7183a2d3e96f11eeadd761d777e62404e330c659d4bb41d3bdf022e94cab3cd0'</span>; pf = <span class="string">'Package Control.sublime-package'</span>; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( <span class="string">'http://sublime.wbond.net/'</span> + pf.replace(<span class="string">' '</span>, <span class="string">'%20'</span>)).read(); dh = hashlib.sha256(by).hexdigest(); print(<span class="string">'Error validating download (got %s instead of %s), please try manual install'</span> % (dh, h)) <span class="keyword">if</span> dh != h <span class="keyword">else</span> open(os.path.join( ipp, pf), <span class="string">'wb'</span> ).write(by)</span><br></pre></td></tr></table></figure><p>3、回车，耐心等待，不到一分钟即下载完毕，具体时间视网速而定。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;换了台机器，需要重新安装Sublime Text 3，于是顺便查了下Package Control安装方法。 然后在官网上发现，Sublime Text 3安装Package Control变成和Sublime Text 2一样简单了。 1、按Ctrl+`召唤出控制台～ 2
+      
+    
+    </summary>
+    
+      <category term="其他" scheme="http://blog.xiganglive.com/categories/%E5%85%B6%E4%BB%96/"/>
+    
+    
+      <category term="Sublime Text" scheme="http://blog.xiganglive.com/tags/Sublime-Text/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Windows服务器开启MySQL远程登录</title>
+    <link href="http://blog.xiganglive.com/2013/09/23/Windows%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%BC%80%E5%90%AFMySQL%E8%BF%9C%E7%A8%8B%E7%99%BB%E5%BD%95/"/>
+    <id>http://blog.xiganglive.com/2013/09/23/Windows服务器开启MySQL远程登录/</id>
+    <published>2013-09-23T15:19:32.000Z</published>
+    <updated>2018-07-25T07:02:04.039Z</updated>
+    
+    <content type="html"><![CDATA[<p>1、防火墙开启端口过滤</p><blockquote><p><code>--&gt;控制面板--&gt;防火墙--&gt;高级--&gt;添加新规则--&gt;端口</code></p></blockquote><p>2、开启MySQL帐号远程登录功能</p><blockquote><p><code>--&gt;登录mysql数据库 --&gt;update user set host = &#39;%&#39; where user=&#39;root&#39;;</code></p></blockquote>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;1、防火墙开启端口过滤&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;--&amp;gt;控制面板--&amp;gt;防火墙--&amp;gt;高级--&amp;gt;添加新规则--&amp;gt;端口&lt;/code&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;2、开启MySQL帐号远程登录功能&lt;/p&gt;
+&lt;b
+      
+    
+    </summary>
+    
+      <category term="数据库" scheme="http://blog.xiganglive.com/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+      <category term="MySQL" scheme="http://blog.xiganglive.com/tags/MySQL/"/>
+    
+      <category term="Windows" scheme="http://blog.xiganglive.com/tags/Windows/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>CentOS上安装mod_jk</title>
+    <link href="http://blog.xiganglive.com/2013/07/10/CentOS%E4%B8%8A%E5%AE%89%E8%A3%85mod_jk/"/>
+    <id>http://blog.xiganglive.com/2013/07/10/CentOS上安装mod_jk/</id>
+    <published>2013-07-10T14:15:13.000Z</published>
+    <updated>2018-07-25T06:46:00.059Z</updated>
+    
+    <content type="html"><![CDATA[<p>为了实现前端使用Apache处理页面，后端使用JBOSS或Tomcat处理逻辑，我们需要为httpd安装mod_jk模块。 操作如下： 1、下载最新的的Apache Tomcat Connector</p><blockquote><p><code>http://tomcat.apache.org/connectors-doc/</code></p></blockquote><p>2、安装http-devel</p><blockquote><p><code>yum -y install httpd-devel</code></p></blockquote><p>3、解压tomcat-connectors-1.2.37-src.tar，然后进行如下操作</p><blockquote><p><code>cd native/ ./configure --with-apxs=/usr/sbin/apxs make make install</code></p></blockquote><p>4、在httpd.conf中添加模块</p><blockquote><p><code>LoadModule jk_module modules/mod_jk.so</code></p></blockquote>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;为了实现前端使用Apache处理页面，后端使用JBOSS或Tomcat处理逻辑，我们需要为httpd安装mod_jk模块。 操作如下： 1、下载最新的的Apache Tomcat Connector&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;code&gt;http://tomc
+      
+    
+    </summary>
+    
+      <category term="Linux" scheme="http://blog.xiganglive.com/categories/Linux/"/>
+    
+    
+      <category term="Apache" scheme="http://blog.xiganglive.com/tags/Apache/"/>
+    
+      <category term="CentOS" scheme="http://blog.xiganglive.com/tags/CentOS/"/>
+    
+      <category term="JBOSS" scheme="http://blog.xiganglive.com/tags/JBOSS/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>JFreeChart中文乱码解决方案</title>
+    <link href="http://blog.xiganglive.com/2013/06/19/JFreeChart%E4%B8%AD%E6%96%87%E4%B9%B1%E7%A0%81%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/"/>
+    <id>http://blog.xiganglive.com/2013/06/19/JFreeChart中文乱码解决方案/</id>
+    <published>2013-06-19T13:52:14.000Z</published>
+    <updated>2018-07-25T06:56:17.740Z</updated>
+    
+    <content type="html"><![CDATA[<p>由于JFreeChart组件的版本、操作平台、JDK的设置等因素，在使用JFreeChart组件时可能会出现中文乱码的现象。 遇到此问题时，可通过设置文字的字体来解决问题。 下面提供一种个人觉得比较好的解决方案：</p><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//创建主题样式 StandardChartTheme standardChartTheme=new StandardChartTheme("CN"); //设置标题字体 standardChartTheme.setExtraLargeFont(new Font("黑体",Font.BOLD,20)); //设置图例的字体 standardChartTheme.setRegularFont(new Font("宋书",Font.PLAIN,15)); //设置轴向的字体 standardChartTheme.setLargeFont(new Font("宋书",Font.PLAIN,15)); //应用主题样式 ChartFactory.setChartTheme(standardChartTheme);</span></span><br></pre></td></tr></table></figure><p>这样，可以解决绝大部分图表中中文乱码的问题。</p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;由于JFreeChart组件的版本、操作平台、JDK的设置等因素，在使用JFreeChart组件时可能会出现中文乱码的现象。 遇到此问题时，可通过设置文字的字体来解决问题。 下面提供一种个人觉得比较好的解决方案：&lt;/p&gt;
+&lt;figure class=&quot;highlight j
+      
+    
+    </summary>
+    
+      <category term="JAVA" scheme="http://blog.xiganglive.com/categories/JAVA/"/>
+    
+    
+      <category term="Java" scheme="http://blog.xiganglive.com/tags/Java/"/>
+    
+      <category term="JFreeChart" scheme="http://blog.xiganglive.com/tags/JFreeChart/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>CentOS设置系统时间及时区</title>
+    <link href="http://blog.xiganglive.com/2013/06/17/CentOS%E8%AE%BE%E7%BD%AE%E7%B3%BB%E7%BB%9F%E6%97%B6%E9%97%B4%E5%8F%8A%E6%97%B6%E5%8C%BA/"/>
+    <id>http://blog.xiganglive.com/2013/06/17/CentOS设置系统时间及时区/</id>
+    <published>2013-06-17T14:44:44.000Z</published>
+    <updated>2018-07-25T07:01:08.962Z</updated>
+    
+    <content type="html"><![CDATA[<p>在我们使用CentOS系统的时候，经常会出现时间不准确的问题。 我们会遇到下面二种情况：<br><strong>一、时区正确，但时间不正确</strong> </p><ul><li><p>查看当前时间及时区：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">date -R</span><br></pre></td></tr></table></figure></li><li><p>设置年月日：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">date -s 06/17/2013</span><br></pre></td></tr></table></figure></li><li><p>设置时分秒：</p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">date -s 11:12:30</span><br><span class="line">``` </span><br><span class="line">- 保存：</span><br><span class="line">```bash</span><br><span class="line">hwclock -w</span><br></pre></td></tr></table></figure></li></ul><p><strong>二、时区不正确</strong> </p><ul><li><p>备份时区 </p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mv /etc/localtime /etc/localtime-old</span><br></pre></td></tr></table></figure></li><li><p>拷贝新时区 </p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime</span><br></pre></td></tr></table></figure></li><li><p>设置完需要重新启动 </p><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">reboot</span><br></pre></td></tr></table></figure></li></ul>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;在我们使用CentOS系统的时候，经常会出现时间不准确的问题。 我们会遇到下面二种情况：&lt;br&gt;&lt;strong&gt;一、时区正确，但时间不正确&lt;/strong&gt; &lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;查看当前时间及时区：&lt;/p&gt;
+&lt;figure class=&quot;highlight b
+      
+    
+    </summary>
+    
+      <category term="其他" scheme="http://blog.xiganglive.com/categories/%E5%85%B6%E4%BB%96/"/>
+    
+    
+      <category term="CentOS" scheme="http://blog.xiganglive.com/tags/CentOS/"/>
+    
+      <category term="Linux" scheme="http://blog.xiganglive.com/tags/Linux/"/>
+    
+  </entry>
+  
+</feed>
