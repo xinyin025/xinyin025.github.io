@@ -215,9 +215,9 @@ yum install ruby ruby-devel rubyge
       <category term="Linux" scheme="http://blog.xiganglive.com/categories/Linux/"/>
     
     
-      <category term="Apache" scheme="http://blog.xiganglive.com/tags/Apache/"/>
-    
       <category term="CentOS" scheme="http://blog.xiganglive.com/tags/CentOS/"/>
+    
+      <category term="Apache" scheme="http://blog.xiganglive.com/tags/Apache/"/>
     
       <category term="JBOSS" scheme="http://blog.xiganglive.com/tags/JBOSS/"/>
     
